@@ -1,3 +1,4 @@
+
 name: CD - Deploy to EC2 
  
 on: 
@@ -9,58 +10,29 @@ on:
  
 jobs: 
   deploy: 
- 
     if: ${{ github.event.workflow_run.conclusion == 'success' }} 
- 
     runs-on: ubuntu-latest 
  
     steps: 
- 
       - name: Deploy to EC2 
-        uses: appleboy/ssh-action@v1.0.3 
+        uses: appleboy/ssh-action@v0.1.7 
  
         with: 
           host: ${{ secrets.HOST_DNS }} 
-          username: ${{ secrets.USERNAME }} 
+          username: ubuntu 
           key: ${{ secrets.EC2_SSH_KEY }} 
  
           script: | 
- 
             IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp 
- 
-            echo "Updating Ubuntu..." 
-            sudo apt-get update -y 
- 
-            echo "Installing Docker if not installed..." 
- 
-            if ! command -v docker >/dev/null 2>&1 
-            then 
-                sudo apt-get install -y docker.io 
-            fi 
- 
-            echo "Starting Docker..." 
- 
-            sudo systemctl enable docker 
-            sudo systemctl start docker 
- 
-            echo "Removing old container..." 
+            TAG=${{ github.event.workflow_run.head_sha }} 
  
             sudo docker stop myapp || true 
             sudo docker rm myapp || true 
  
-            echo "Removing old images..." 
- 
-            sudo docker image prune -af 
- 
-            echo "Pulling latest image..."
-            sudo docker pull $IMAGE:latest 
- 
-            echo "Starting new container..." 
+            sudo docker pull $IMAGE:$TAG 
  
             sudo docker run -d \ 
               --restart always \ 
               --name myapp \ 
               -p 8080:80 \ 
-              $IMAGE:latest 
- 
-            echo "Deployment Completed Successfully." 
+              $IMAGE:$TAG 
